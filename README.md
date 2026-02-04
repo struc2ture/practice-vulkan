@@ -1,0 +1,1 @@
+A recreation of https://github.com/SaschaWillems/Vulkan for practice.
