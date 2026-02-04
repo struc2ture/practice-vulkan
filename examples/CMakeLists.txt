@@ -1,5 +1,6 @@
 set(EXAMPLES
     000_test
+    001_triangle
 )
 
 function (buildExample EXAMPLE_NAME)

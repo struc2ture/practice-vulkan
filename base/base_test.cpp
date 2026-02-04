@@ -3,7 +3,10 @@
 #include <volk/volk.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
 
+#include <format>
 #include <iostream>
 
 
@@ -45,4 +48,9 @@ VkInstance initialize()
     chk(vkCreateInstance(&instanceCI, nullptr, &instance));
     volkLoadInstance(instance);
     return instance;
+}
+
+void testMe()
+{
+    std::cout << "Ouch!!!\n";
 }
