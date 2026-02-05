@@ -1,7 +1,14 @@
+#pragma once
+
 #include <vulkan/vulkan.h>
 
 #include <string>
 #include <iostream>
+
+// Custom define for better code readability
+#define VK_FLAGS_NONE 0
+// Default fence timeout in nanoseconds
+#define DEFAULT_FENCE_TIMEOUT 100000000000
 
 #define VK_CHECK_RESULT(f)																				\
 {																										\
@@ -20,5 +27,6 @@ namespace vks
 		std::string errorString(VkResult errorCode);
 		void exitFatal(const std::string& message, int32_t exitCode);
 		void exitFatal(const std::string& message, VkResult resultCode);
+		VkBool32 getSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat);
 	}
 }
