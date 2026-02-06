@@ -64,6 +64,17 @@ protected:
 
     Camera camera;
 
+    struct
+    {
+        struct
+        {
+            bool left{ false };
+            bool right{ false };
+            bool middle{ false };
+        } buttons;
+        glm::vec2 position;
+    } mouseState;
+
 private:
     uint32_t frameCounter = 0;
     uint32_t lastFPS = 0;
@@ -345,6 +356,56 @@ public:
                         }
                     }
                 }
+
+                if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+                {
+                    switch (event.button.button)
+                    {
+                    case SDL_BUTTON_LEFT:
+                        mouseState.buttons.left = true;
+                        break;
+                    case SDL_BUTTON_MIDDLE:
+                        mouseState.buttons.middle = true;
+                        break;
+                    case SDL_BUTTON_RIGHT:
+                        mouseState.buttons.right = true;
+                        break;
+                    }
+                }
+                if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
+                {
+                    switch (event.button.button)
+                    {
+                    case SDL_BUTTON_LEFT:
+                        mouseState.buttons.left = false;
+                        break;
+                    case SDL_BUTTON_MIDDLE:
+                        mouseState.buttons.middle = false;
+                        break;
+                    case SDL_BUTTON_RIGHT:
+                        mouseState.buttons.right = false;
+                        break;
+                    }
+                }
+
+                if (event.type == SDL_EVENT_MOUSE_MOTION)
+                {
+                    handleMouseMove(event.motion.x, event.motion.y);
+                }
+
+                if (event.type == SDL_EVENT_MOUSE_WHEEL)
+                {
+                    camera.translate(glm::vec3(0.0f, 0.0f, (float)event.wheel.y * 0.005f));
+                }
+
+                if (event.type == SDL_EVENT_WINDOW_RESIZED)
+                {
+                    int w, h;
+                    SDL_GetWindowSize(window, &w, &h);
+                    width = static_cast<uint32_t>(w);
+                    height = static_cast<uint32_t>(h);
+                    windowResize();
+                }
             }
 
             bool isMinimized = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
@@ -543,7 +604,41 @@ protected:
          prepared = true;
     }
 
-    virtual void windowResized() {};
+    virtual void windowResized() {}
+
+    void handleMouseMove(float x, float y)
+    {
+        float dx = mouseState.position.x - x;
+        float dy = mouseState.position.y - y;
+
+        bool handled = false;
+        
+        // Check if handled by imgui
+        // ...
+        mouseMoved(x, y, handled);
+
+        if (handled)
+        {
+            mouseState.position = glm::vec2{ x, y };
+            return;
+        }
+
+        if (mouseState.buttons.left)
+        {
+            camera.rotate(glm::vec3(dy * camera.rotationSpeed, -dx * camera.rotationSpeed, 0.0f));
+        }
+        if (mouseState.buttons.right)
+        {
+            camera.translate(glm::vec3{ -0.0f, 0.0f, dy * 0.005f });
+        }
+        if (mouseState.buttons.middle)
+        {
+            camera.translate(glm::vec3(-dx * 0.005f, -dy * 0.05f, 0.0f));
+        }
+        mouseState.position = glm::vec2{ x, y };
+    }
+
+    virtual void mouseMoved(float x, float y, bool handled) {}
 
 private:
     void nextFrame()
