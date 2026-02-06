@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "base_test.h"
+#include "camera.h"
 #include "VulkanInitializers.h"
 #include "VulkanTools.h"
 
@@ -58,7 +59,10 @@ protected:
     } depthStencil{};
     VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
     VkPipelineCache pipelineCache{ VK_NULL_HANDLE };
+
     bool prepared{ false };
+
+    Camera camera;
 
 private:
     uint32_t frameCounter = 0;
@@ -89,7 +93,7 @@ public:
 
     }
 
-    ~VulkanExampleBase()
+    virtual ~VulkanExampleBase()
     {
         VK_CHECK_RESULT(vkDeviceWaitIdle(device));
         if (swapchain != VK_NULL_HANDLE)
@@ -276,6 +280,71 @@ public:
                     quit = true;
                     break;
                 }
+                if (event.type == SDL_EVENT_KEY_DOWN)
+                {
+                    switch (event.key.key)
+                    {
+                    case SDLK_P:
+                        paused = !paused;
+                        break;
+                    case SDLK_F1:
+                        // UI visible
+                        break;
+                    case SDLK_F2:
+                        if (camera.type == Camera::CameraType::lookat)
+                        {
+                            camera.type = Camera::CameraType::firstperson;
+                        }
+                        else
+                        {
+                            camera.type = Camera::CameraType::lookat;
+                        }
+                        break;
+                    case SDLK_ESCAPE:
+                        quit = true;
+                        break;
+                    }
+
+                    if (camera.type == Camera::firstperson)
+                    {
+                        switch (event.key.key)
+                        {
+                        case SDLK_W:
+                            camera.keys.up = true;
+                            break;
+                        case SDLK_S:
+                            camera.keys.down = true;
+                            break;
+                        case SDLK_A:
+                            camera.keys.left = true;
+                            break;
+                        case SDLK_D:
+                            camera.keys.right = true;
+                            break;
+                        }
+                    }
+                }
+                if (event.type == SDL_EVENT_KEY_UP)
+                {
+                    if (camera.type == Camera::firstperson)
+                    {
+                        switch (event.key.key)
+                        {
+                        case SDLK_W:
+                            camera.keys.up = false;
+                            break;
+                        case SDLK_S:
+                            camera.keys.down = false;
+                            break;
+                        case SDLK_A:
+                            camera.keys.left = false;
+                            break;
+                        case SDLK_D:
+                            camera.keys.right = false;
+                            break;
+                        }
+                    }
+                }
             }
 
             bool isMinimized = SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED;
@@ -443,7 +512,7 @@ protected:
         setupDepthStencil();
         for (auto& frameBuffer : frameBuffers)
         {
-            vkDestroyFramebuffer(device, frameBuffer, nullptr);k
+            vkDestroyFramebuffer(device, frameBuffer, nullptr);
         }
         setupFrameBuffer();
 
@@ -487,6 +556,7 @@ private:
         auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
 
         frameTimer = (float)tDiff / 1000.0f;
+        camera.update(frameTimer);
 
         if (!paused)
         {
@@ -709,6 +779,44 @@ public:
         glm::mat4 viewMatrix;
     };
 
+    VulkanExample() : VulkanExampleBase()
+    {
+        title = "Basic indexed triangle using Vulkan 1.3";
+        camera.type = Camera::CameraType::lookat;
+        camera.setPosition(glm::vec3(0.0f, 0.0f, -2.5f));
+        camera.setRotation(glm::vec3(0.0f));
+        camera.setPerspective(60.0f, (float)width / (float)height, 1.0f, 256.0f);
+    }
+
+    ~VulkanExample() override
+    {
+        if (device)
+        {
+            vkDestroyPipeline(device, pipeline, nullptr);
+            vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+            vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+            vkDestroyBuffer(device, vertexBuffer.handle, nullptr);
+            vkFreeMemory(device, vertexBuffer.memory, nullptr);
+            vkDestroyBuffer(device, indexBuffer.handle, nullptr);
+            vkFreeMemory(device, indexBuffer.memory, nullptr);
+            vkDestroyCommandPool(device, exampleCommandPool, nullptr);
+            for (auto i = 0; i < examplePresentCompleteSemaphores.size(); i++)
+            {
+                vkDestroySemaphore(device, examplePresentCompleteSemaphores[i], nullptr);
+            }
+            for (auto i = 0; i < exampleRenderCompleteSemaphores.size(); i++)
+            {
+                vkDestroySemaphore(device, exampleRenderCompleteSemaphores[i], nullptr);
+            }
+            for (auto i = 0; i < maxConcurrentFrames; i++)
+            {
+                vkDestroyFence(device, exampleWaitFences[i], nullptr);
+                vkDestroyBuffer(device, uniformBuffers[i].handle, nullptr);
+                vkFreeMemory(device, uniformBuffers[i].memory, nullptr);
+            }
+        }
+    }
+
 private:
     std::array<VkFence, maxConcurrentFrames> exampleWaitFences{};
     std::array<VkSemaphore, maxConcurrentFrames> examplePresentCompleteSemaphores{};
@@ -764,7 +872,7 @@ public:
         VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &cmdBufInfo));
 
         vks::tools::insertImageMemoryBarrier(commandBuffer, swapchainImages[imageIndex], 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-        vks::tools::insertImageMemoryBarrier(commandBuffer, depthStencil.image, 0, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+        vks::tools::insertImageMemoryBarrier(commandBuffer, depthStencil.image, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, VkImageSubresourceRange{ VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
 
         VkRenderingAttachmentInfo colorAttachment{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         colorAttachment.imageView = swapchainImageViews[imageIndex];
@@ -813,7 +921,7 @@ public:
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &exampleRenderCompleteSemaphores[imageIndex];
         submitInfo.signalSemaphoreCount = 1;
-        VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, waitFences[currentFrame]));
+        VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, exampleWaitFences[currentFrame]));
 
         VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
@@ -833,7 +941,6 @@ public:
 
         currentFrame = (currentFrame + 1) % maxConcurrentFrames;
     }
-
 
 private:
     void createExampleSynchronizationPrimitives()
