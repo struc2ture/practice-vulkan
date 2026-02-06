@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 
+#include "VulkanInitializers.h"
 #include "VulkanTools.h"
 
 namespace vks
@@ -80,6 +81,35 @@ namespace vks
 			}
 
 			return false;
+		}
+
+		void insertImageMemoryBarrier(
+			VkCommandBuffer cmdBuffer,
+			VkImage image,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask,
+			VkPipelineStageFlags dstStageMask,
+			VkImageSubresourceRange subresourceRange)
+		{
+			VkImageMemoryBarrier imageMemoryBarrier = vks::initializers::imageMemoryBarrier();
+			imageMemoryBarrier.srcAccessMask = srcAccessMask;
+			imageMemoryBarrier.dstAccessMask = dstAccessMask;
+			imageMemoryBarrier.oldLayout = oldImageLayout;
+			imageMemoryBarrier.newLayout = newImageLayout;
+			imageMemoryBarrier.image = image;
+			imageMemoryBarrier.subresourceRange = subresourceRange;
+
+			vkCmdPipelineBarrier(
+				cmdBuffer,
+				srcStageMask,
+				dstStageMask,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &imageMemoryBarrier);
 		}
 	}
 }

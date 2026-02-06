@@ -26,5 +26,14 @@ namespace vks
             cmdBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
             return cmdBufferBeginInfo;
         }
+
+        inline VkImageMemoryBarrier imageMemoryBarrier()
+        {
+            VkImageMemoryBarrier imageMemoryBarrier{};
+            imageMemoryBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            return imageMemoryBarrier;
+        }
     }
 }

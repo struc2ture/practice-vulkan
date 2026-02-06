@@ -28,5 +28,16 @@ namespace vks
 		void exitFatal(const std::string& message, int32_t exitCode);
 		void exitFatal(const std::string& message, VkResult resultCode);
 		VkBool32 getSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat *depthFormat);
+		void insertImageMemoryBarrier(
+			VkCommandBuffer cmdBuffer,
+			VkImage image,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask,
+			VkPipelineStageFlags dstStageMask,
+			VkImageSubresourceRange subresourceRange);
+
 	}
 }
